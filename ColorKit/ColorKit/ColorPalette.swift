@@ -118,7 +118,7 @@ public struct ColorPalette {
             primaryColor = darkestColor!
         }
         
-        let secondaryColor = colors.first { (color) -> Bool in
+        var secondaryColor: UIColor! = colors.first { (color) -> Bool in
             if !ignoreContrastRatio {
                 let backgroundColorConstratRatio = color.contrastRatio(with: backgroundColor)
                 switch backgroundColorConstratRatio {
@@ -148,29 +148,28 @@ public struct ColorPalette {
         /// Check if primary is readable
         if !ignoreContrastRatio {
             switch primaryColor.contrastRatio(with: backgroundColor) {
-            case .acceptable: self.primary = primaryColor
+            case .acceptable: break
             default:
                 switch backgroundColor.complementaryColor.contrastRatio(with: backgroundColor) {
-                case .acceptable, .acceptableForLargeText: self.primary = backgroundColor.complementaryColor
-                default: self.primary = primaryColor
+                case .acceptable, .acceptableForLargeText: primaryColor = backgroundColor.complementaryColor
+                default: break
                 }
             }
-        } else {
-            self.primary = primaryColor
         }
         
-        if !ignoreContrastRatio, let secondaryColor = secondaryColor {
+        self.primary = primaryColor
+        
+        if !ignoreContrastRatio, secondaryColor != nil {
             switch secondaryColor.contrastRatio(with: backgroundColor) {
-            case .acceptable: self.secondary = secondaryColor
-            default:
-                switch backgroundColor.complementaryColor.contrastRatio(with: backgroundColor) {
-                case .acceptable, .acceptableForLargeText: self.secondary = backgroundColor.complementaryColor
-                default: self.secondary = secondaryColor
+            case .acceptableForLargeText, .acceptable: break
+            case .low(let level):
+                switch backgroundColor.contrastRatio(with: primaryColor) {
+                case .acceptable, .acceptableForLargeText: secondaryColor = primaryColor
+                case .low(let otherLevel): secondaryColor = level > otherLevel ? secondaryColor : primaryColor
                 }
             }
-        } else {
-            self.secondary = secondaryColor ?? primaryColor
         }
+        self.secondary = secondaryColor ?? primaryColor
     }
     
 }
