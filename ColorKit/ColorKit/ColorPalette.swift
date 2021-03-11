@@ -18,7 +18,7 @@ public struct ColorPalette {
     public let primary: UIColor
     
     /// The color that should be used as the secondary detail. For example text that isn't as important as the one represented by the primary property.
-    public let secondary: UIColor?
+    public let secondary: UIColor
     
     /// Initializes a coherant color palette based on the passed in colors.
     /// The colors should be sorted by order of importance, where the first color is the most important.
@@ -77,7 +77,7 @@ public struct ColorPalette {
         guard let primary = primaryColor else { return nil }
         self.background = backgroundColor
         self.primary = primary
-        self.secondary = secondaryColor
+        self.secondary = secondaryColor ?? primary
     }
     
     /// Initializes a coherant color palette based on the passed in colors.
@@ -88,8 +88,10 @@ public struct ColorPalette {
     ///   - darkBackground: Whether the color palette is required to have a dark background. If set to false, the background can be dark or bright.
     ///   - ignoreContrastRatio: Whether the color paletter should ignore the contrast ratio between the different colors. It is recommended to set this value to `false` (default) if the color paletter will be used to display text.
     public init?(colors: [UIColor], darkBackground: Bool = true, ignoreContrastRatio: Bool = false) {
-        guard colors.count > 1 else {
-            return nil
+        guard !colors.isEmpty else { return nil }
+        var colors = colors
+        if colors.count == 1 {
+            colors.append(colors.first!.complementaryColor)
         }
         
         var darkestColor: UIColor?
@@ -142,8 +144,33 @@ public struct ColorPalette {
         }
         
         self.background = backgroundColor
-        self.primary = primaryColor
-        self.secondary = secondaryColor
+
+        /// Check if primary is readable
+        if !ignoreContrastRatio {
+            switch primaryColor.contrastRatio(with: backgroundColor) {
+            case .acceptable: self.primary = primaryColor
+            default:
+                switch backgroundColor.complementaryColor.contrastRatio(with: backgroundColor) {
+                case .acceptable, .acceptableForLargeText: self.primary = backgroundColor.complementaryColor
+                default: self.primary = primaryColor
+                }
+            }
+        } else {
+            self.primary = primaryColor
+        }
+        
+        if !ignoreContrastRatio, let secondaryColor = secondaryColor {
+            switch secondaryColor.contrastRatio(with: backgroundColor) {
+            case .acceptable: self.secondary = secondaryColor
+            default:
+                switch backgroundColor.complementaryColor.contrastRatio(with: backgroundColor) {
+                case .acceptable, .acceptableForLargeText: self.secondary = backgroundColor.complementaryColor
+                default: self.secondary = secondaryColor
+                }
+            }
+        } else {
+            self.secondary = secondaryColor ?? primaryColor
+        }
     }
     
 }
